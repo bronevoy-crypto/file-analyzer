@@ -98,8 +98,8 @@ class MainController:
         excel_file = "КаталогФайлов_с_тегами.xlsx"
         
         success = self.excel_writer.save_results(
-            files_data=all_files_with_tags,
-            tags_explanations=all_tags_explanations,
+            files_data=files_with_tags,               # Используйте реальные данные
+            tags_explanations=all_tags_explanations,  # Всё равно пустой, нужно создать
             output_file=excel_file,
             stats=self.stats
         )
