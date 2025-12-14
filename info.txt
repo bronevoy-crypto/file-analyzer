@@ -1,0 +1,17 @@
+📁 file_analyzer_mvc/          # Корневая папка проекта
+├── 📄 main.py                # Точка входа (заменяет analyze_files.py)
+├── 📄 config.py              # Конфигурация (пути, настройки)
+│
+├── 📁 model/                 # МОДЕЛЬ - бизнес-логика
+│   ├── 📄 file_scanner.py      # Сканирование файлов
+│   ├── 📄 tag_engine.py        # Генерация тегов (Issue #1)
+│   └── 📄 excel_writer.py      # Работа с Excel
+│
+├── 📁 view/                  # VIEW - интерфейсы  
+│   └── 📄 cli_view.py         # Консольный вывод (пока только CLI)
+│
+├── 📁 controller/            # CONTROLLER - связующее звено
+│   └── 📄 main_controller.py  # Главный контроллер
+│
+└── 📁 utils/                 # Вспомогательные модули
+    └── 📄 helpers.py          # Общие функции
