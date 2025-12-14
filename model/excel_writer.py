@@ -1,102 +1,99 @@
-"""
-МОДЕЛЬ: Работа с Excel
-"""
-
-from openpyxl import Workbook, load_workbook
-from openpyxl.utils import get_column_letter
-from datetime import datetime
-from typing import List, Dict
 import os
-
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from datetime import datetime
 
 class ExcelWriter:
-    """Запись результатов в Excel"""
+    def __init__(self):
+        self.wb = Workbook()
+        self.ws = self.wb.active
+        self.ws.title = "File Analysis"
+        self._setup_header()
     
-    def save_results(self, files_data: List[Dict], 
-                    tags_explanations: List[Dict],
-                    output_file: str,
-                    stats: Dict) -> bool:
+    def _setup_header(self):
+        """Настройка заголовков таблицы"""
+        headers = [
+            "File Name", "Path", "Size (KB)", 
+            "Extension", "Created", "Modified",
+            "Tags", "Category", "Duplicate Group"
+        ]
+        
+        for col, header in enumerate(headers, 1):
+            cell = self.ws.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            cell.font = Font(color="FFFFFF", bold=True)
+            cell.alignment = Alignment(horizontal="center")
+    
+    def add_file_data(self, file_data):
+        """Добавление данных о файле в таблицу"""
+        row = self.ws.max_row + 1
+        
+        self.ws.cell(row=row, column=1, value=file_data.get('filename', ''))
+        self.ws.cell(row=row, column=2, value=file_data.get('path', ''))
+        self.ws.cell(row=row, column=3, value=file_data.get('size_kb', 0))
+        self.ws.cell(row=row, column=4, value=file_data.get('extension', ''))
+        
+        # Форматирование дат
+        created = file_data.get('created')
+        if created:
+            self.ws.cell(row=row, column=5, value=created.strftime('%Y-%m-%d %H:%M:%S'))
+        
+        modified = file_data.get('modified')
+        if modified:
+            self.ws.cell(row=row, column=6, value=modified.strftime('%Y-%m-%d %H:%M:%S'))
+        
+        self.ws.cell(row=row, column=7, value=', '.join(file_data.get('tags', [])))
+        self.ws.cell(row=row, column=8, value=file_data.get('category', ''))
+        self.ws.cell(row=row, column=9, value=file_data.get('duplicate_group', ''))
+        
+        # Автоматическая подгонка ширины колонок
+        for column in self.ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            self.ws.column_dimensions[column_letter].width = adjusted_width
+    
+    def save(self, target_directory, analysis_name=None):
         """
-        Сохраняет результаты анализа в Excel файл
+        Сохраняет Excel файл рядом с анализируемой папкой
+        
+        Args:
+            target_directory: путь к анализируемой папке
+            analysis_name: название анализа (необязательно)
         """
+        # Генерируем имя файла с временной меткой
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        if analysis_name:
+            filename = f"file_analysis_{analysis_name}_{timestamp}.xlsx"
+        else:
+            # Используем имя папки для названия файла
+            folder_name = os.path.basename(os.path.normpath(target_directory))
+            filename = f"file_analysis_{folder_name}_{timestamp}.xlsx"
+        
+        # Сохраняем в той же директории, где находится анализируемая папка
+        # (на уровень выше, если нужно прямо рядом)
+        parent_dir = os.path.dirname(target_directory)
+        
+        # Если анализируется корневая директория, сохраняем в нее
+        if parent_dir == '':
+            parent_dir = target_directory
+        
+        filepath = os.path.join(parent_dir, filename)
+        
         try:
-            # Создаем новую книгу
-            wb = Workbook()
-            
-            # 1. Лист "Файлы"
-            ws_files = wb.active
-            ws_files.title = "Файлы"
-            
-            # Заголовки (добавляем колонку "Теги")
-            headers = ["Имя файла", "Путь", "Дата создания", 
-                      "Размер (МБ)", "Расширение", "Теги", "Кол-во тегов"]
-            ws_files.append(headers)
-            
-            # Данные файлов
-            for file_data in files_data:
-                ws_files.append([
-                    file_data['filename'],
-                    file_data['relative_path'],
-                    file_data['created_date'].strftime("%d.%m.%Y %H:%M"),
-                    file_data['size_mb'],
-                    file_data['extension'],
-                    ", ".join(file_data.get('tags', [])),
-                    file_data.get('tags_count', 0)
-                ])
-            
-            # 2. Лист "Теги" (НОВЫЙ - для Issue #1)
-            ws_tags = wb.create_sheet("Теги")
-            tags_headers = ["Тег", "Источник", "Описание", "Пример файла", "Частота"]
-            ws_tags.append(tags_headers)
-            
-            # Считаем частоту тегов
-            tag_frequency = {}
-            for explanation in tags_explanations:
-                tag = explanation['тег']
-                tag_frequency[tag] = tag_frequency.get(tag, 0) + 1
-            
-            # Данные тегов (уникальные)
-            seen_tags = set()
-            for explanation in tags_explanations:
-                tag = explanation['тег']
-                if tag not in seen_tags:
-                    seen_tags.add(tag)
-                    ws_tags.append([
-                        tag,
-                        explanation['источник'],
-                        explanation['описание'],
-                        explanation['пример_файла'],
-                        tag_frequency[tag]
-                    ])
-            
-            # 3. Лист "Сводка"
-            ws_summary = wb.create_sheet("Сводка")
-            ws_summary.append(["Параметр", "Значение"])
-            ws_summary.append(["Дата анализа", datetime.now().strftime("%d.%m.%Y %H:%M")])
-            ws_summary.append(["Всего файлов", stats.get('files_processed', 0)])
-            ws_summary.append(["Всего тегов", stats.get('total_tags', 0)])
-            ws_summary.append(["Время выполнения", f"{stats.get('duration_seconds', 0)} сек"])
-            
-            # Автонастройка ширины колонок
-            for ws in [ws_files, ws_tags, ws_summary]:
-                for column in ws.columns:
-                    max_length = 0
-                    column_letter = get_column_letter(column[0].column)
-                    for cell in column:
-                        try:
-                            cell_length = len(str(cell.value))
-                            if cell_length > max_length:
-                                max_length = cell_length
-                        except:
-                            pass
-                    adjusted_width = min(max_length + 2, 50)
-                    ws.column_dimensions[column_letter].width = adjusted_width
-            
-            # Сохраняем файл
-            wb.save(output_file)
-            
-            return True
-            
+            self.wb.save(filepath)
+            return filepath
         except Exception as e:
-            print(f"Ошибка при сохранении в Excel: {e}")
-            return False
+            # Если не удалось сохранить в указанную директорию,
+            # сохраняем в текущей рабочей директории
+            print(f"Warning: Could not save to {parent_dir}: {e}")
+            fallback_path = os.path.join(os.getcwd(), filename)
+            self.wb.save(fallback_path)
+            return fallback_path

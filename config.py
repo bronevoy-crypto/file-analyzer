@@ -58,3 +58,24 @@ LOG_SETTINGS = {
     "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     "file": LOG_DIR / "file_analyzer.log"
 }
+
+class Config:
+    # Настройки вывода отчетов
+    OUTPUT_STRATEGY = "PARENT_DIR"  # PARENT_DIR, SAME_DIR, CUSTOM
+    
+    # Можно задать кастомную папку для отчетов
+    CUSTOM_OUTPUT_DIR = None  # Если None, будет использоваться стратегия выше
+    
+    @staticmethod
+    def get_output_directory(target_dir):
+        """Определяет директорию для сохранения отчета"""
+        if Config.CUSTOM_OUTPUT_DIR:
+            return Config.CUSTOM_OUTPUT_DIR
+        
+        if Config.OUTPUT_STRATEGY == "PARENT_DIR":
+            parent = os.path.dirname(target_dir)
+            return parent if parent else target_dir
+        elif Config.OUTPUT_STRATEGY == "SAME_DIR":
+            return target_dir
+        
+        return os.getcwd()  # По умолчанию текущая директория

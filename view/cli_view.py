@@ -5,7 +5,8 @@ VIEW: Консольный интерфейс
 
 from typing import List, Dict
 from datetime import datetime
-
+import os
+import argparse
 
 class CLIView:
     """Консольный интерфейс пользователя"""
@@ -103,3 +104,27 @@ class CLIView:
                     examples = stats['tag_info'][tag].get('examples', [])
                     example_str = ", ".join(examples[:3]) + ("..." if len(examples) > 3 else "")
                     print(f"    {tag:20} {count:3} файлов ← {example_str}")
+    def get_analysis_directory(self):
+        """Получение директории для анализа от пользователя"""
+        parser = argparse.ArgumentParser(description='File Analyzer Tool')
+        parser.add_argument(
+            'directory',
+            nargs='?',
+            default='.',
+            help='Directory to analyze (default: current directory)'
+        )
+        parser.add_argument(
+            '--output',
+            '-o',
+            help='Custom output directory for Excel report'
+        )
+        
+        args = parser.parse_args()
+        
+        # Если указана папка для вывода, проверяем ее существование
+        if args.output:
+            if not os.path.exists(args.output):
+                os.makedirs(args.output, exist_ok=True)
+                self.show_message(f"Created output directory: {args.output}")
+        
+        return args.directory, args.output
