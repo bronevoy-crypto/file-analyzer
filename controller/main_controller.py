@@ -14,7 +14,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from model.file_scanner import FileScanner
-from model.tag_engine import TagEngine
+from model.tag_engine import SmartTagEngine  
 from model.excel_writer import ExcelWriter
 
 # Импортируем View
@@ -28,7 +28,10 @@ class MainController:
         # Инициализируем компоненты MVC
         self.view = CLIView()
         self.file_scanner = FileScanner()
-        self.tag_engine = TagEngine()
+        self.tag_engine = SmartTagEngine(
+            min_frequency=0.15,  # 15% минимальная частота
+            history_file="tag_history.json"
+        )
         self.excel_writer = ExcelWriter()
         
         # Статистика
@@ -64,41 +67,32 @@ class MainController:
             self.view.show_error("Файлы не найдены")
             return False
         
-        # 6. Обрабатываем каждый файл
+       
+        # 6. MODEL: Умная пакетная обработка тегов
         all_files_with_tags = []
         all_tags_explanations = []
+        self.view.show_progress(0, 0, "Анализирую частотность тегов...")
         
-        for i, file_data in enumerate(files_data, 1):
-            # VIEW: Показываем прогресс
-            self.view.show_progress(i, len(files_data), 
-                                  f"Обработка файлов...")
+        files_with_tags, tag_stats = self.tag_engine.analyze_batch(files_data)
+        
+        # Показываем статистику тегов
+        print(f"\n📊 Статистика тегов:")
+        print(f"  Всего уникальных тегов: {tag_stats['total_tags']}")
+        print(f"  Частые теги: {tag_stats['common_tags']}")
+        print(f"  Категоризированные теги: {tag_stats['category_tags']}")
+        
+        # Показываем топ-10 тегов
+        if tag_stats['tag_info']:
+            print(f"\n🏆 Топ тегов:")
+            sorted_tags = sorted(
+                tag_stats['tag_info'].items(),
+                key=lambda x: x[1]['count'],
+                reverse=True
+            )[:10]
             
-            # MODEL: Генерируем теги
-            tags = self.tag_engine.generate_tags(
-                file_data['filename'], 
-                file_data['relative_path']
-            )
-            
-            # MODEL: Создаем объяснения тегов
-            explanations = self.tag_engine.create_tags_explanation(
-                tags, 
-                file_data['filename'], 
-                file_data['relative_path']
-            )
-            
-            # Обновляем данные файла
-            file_data['tags'] = tags
-            file_data['tags_count'] = len(tags)
-            all_files_with_tags.append(file_data)
-            all_tags_explanations.extend(explanations)
-            
-            # VIEW: Показываем информацию о файле (опционально)
-            if i <= 5:  # Показываем только первые 5 файлов для примера
-                self.view.show_file_info(file_data, tags)
-            
-            # Обновляем статистику
-            self.stats['files_processed'] = i
-            self.stats['total_tags'] += len(tags)
+            for tag, info in sorted_tags:
+                freq_percent = info['frequency'] * 100
+                print(f"  {tag}: {info['count']} файлов ({freq_percent:.1f}%)")
         
         # 7. MODEL: Сохраняем в Excel
         excel_file = "КаталогФайлов_с_тегами.xlsx"

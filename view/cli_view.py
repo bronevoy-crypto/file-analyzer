@@ -66,3 +66,40 @@ class CLIView:
         default_dir = "."
         user_input = input(f"\nВведите путь к папке (Enter для текущей '{default_dir}'): ").strip()
         return user_input if user_input else default_dir
+    
+    def show_tag_statistics(self, stats: Dict):
+        """Показывает статистику тегов"""
+        print("\n" + "=" * 50)
+        print("АНАЛИЗ ТЕГОВ")
+        print("=" * 50)
+        
+        print(f"📈 Общая статистика:")
+        print(f"  Файлов обработано: {stats.get('total_files', 0)}")
+        print(f"  Всего тегов: {stats.get('total_tags', 0)}")
+        print(f"  Частые теги (>15%): {stats.get('common_tags', 0)}")
+        print(f"  Категоризированные: {stats.get('category_tags', 0)}")
+        
+        if 'tag_info' in stats and stats['tag_info']:
+            print(f"\n🏷️  Детализация тегов:")
+            
+            # Группируем по типу
+            common_tags = []
+            category_tags = []
+            
+            for tag, info in stats['tag_info'].items():
+                if info['type'] == 'common':
+                    common_tags.append((tag, info['count'], info['frequency']))
+                else:
+                    category_tags.append((tag, info['count'], info['frequency']))
+            
+            if common_tags:
+                print(f"\n  Частые теги:")
+                for tag, count, freq in sorted(common_tags, key=lambda x: x[1], reverse=True)[:15]:
+                    print(f"    {tag:20} {count:3} файлов ({freq*100:5.1f}%)")
+            
+            if category_tags:
+                print(f"\n  Категории:")
+                for tag, count, freq in sorted(category_tags, key=lambda x: x[1], reverse=True):
+                    examples = stats['tag_info'][tag].get('examples', [])
+                    example_str = ", ".join(examples[:3]) + ("..." if len(examples) > 3 else "")
+                    print(f"    {tag:20} {count:3} файлов ← {example_str}")
