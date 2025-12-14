@@ -1,52 +1,24 @@
-#!/usr/bin/env python3
-"""
-Точка входа в приложение
-Анализатор файлов с тегами (MVP + MVC)
-"""
-
-import sys
 import os
-
-# Добавляем путь к модулям
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+import sys
 from controller.main_controller import MainController
-
+from view.cli_view import CLIView
 
 def main():
-    """Основная функция"""
-    print("🚀 Запуск MVP анализатора файлов с MVC архитектурой...")
+    view = CLIView()
+    controller = MainController(view)
     
-    try:
-        # Создаем и запускаем контроллер
-        controller = MainController()
-        success = controller.run()
-        
-        if success:
-            print("\n" + "🎯" * 25)
-            print("🎯 MVP ГОТОВ! Архитектура MVC реализована.")
-            print("🎯" * 25)
-            print("\nЧто сделано:")
-            print("  1. ✅ MVC архитектура (Model-View-Controller)")
-            print("  2. ✅ Генерация тегов из имени и пути (Issue #1)")
-            print("  3. ✅ Запись тегов в Excel (колонка + лист 'Теги')")
-            print("  4. ✅ Консольный интерфейс с прогрессом")
-            print("\nМожно улучшать дальше!")
-            
-            # Ждем подтверждения
-            input("\nНажмите Enter для выхода...")
-        else:
-            print("\n❌ Завершено с ошибками")
-            input("\nНажмите Enter для выхода...")
-            
-    except KeyboardInterrupt:
-        print("\n\n⚠️ Программа прервана пользователем")
-    except Exception as e:
-        print(f"\n🔥 Критическая ошибка: {e}")
-        import traceback
-        traceback.print_exc()
-        input("\nНажмите Enter для выхода...")
-
+    # Получаем директорию для анализа и опционально папку для вывода
+    directory, output_dir = view.get_analysis_directory()
+    
+    # Проверяем существование директории
+    if not os.path.exists(directory):
+        view.show_error(f"Directory '{directory}' does not exist!")
+        sys.exit(1)
+    
+    # Анализируем директорию
+    controller.analyze_directory(directory)
+    
+    view.show_message("\nAnalysis completed successfully!")
 
 if __name__ == "__main__":
     main()

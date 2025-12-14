@@ -16,13 +16,18 @@ def safe_path(path: Union[str, Path]) -> Path:
     return Path(path) if isinstance(path, str) else path
 
 
-def format_size(size_bytes: int) -> str:
-    """Форматирует размер файла в читаемый вид"""
-    for unit in ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ']:
-        if size_bytes < 1024.0:
-            return f"{size_bytes:.2f} {unit}"
+def format_size(size_bytes):
+    """Форматирование размера файла в читаемый вид"""
+    if size_bytes == 0:
+        return "0 B"
+    
+    size_names = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    i = 0
+    while size_bytes >= 1024 and i < len(size_names) - 1:
         size_bytes /= 1024.0
-    return f"{size_bytes:.2f} ПБ"
+        i += 1
+    
+    return f"{size_bytes:.2f} {size_names[i]}"
 
 
 def format_date(timestamp: float) -> str:

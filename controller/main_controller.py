@@ -1,9 +1,9 @@
 import os
+from collections import Counter
 from model.file_scanner import FileScanner
 from model.tag_engine import TagEngine
 from model.excel_writer import ExcelWriter
 from utils.helpers import format_size, get_category
-import time
 from datetime import datetime
 
 class MainController:
@@ -112,3 +112,14 @@ class MainController:
         self.view.show_message("\nFiles by category:")
         for category, count in categories.most_common():
             self.view.show_message(f"  {category}: {count} files")
+        
+        # Статистика по тегам
+        all_tags = []
+        for f in analysis_results:
+            all_tags.extend(f['tags'])
+        
+        if all_tags:
+            tag_counter = Counter(all_tags)
+            self.view.show_message("\nMost common tags:")
+            for tag, count in tag_counter.most_common(10):
+                self.view.show_message(f"  {tag}: {count} files")
