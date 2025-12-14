@@ -218,7 +218,7 @@ class SmartTagEngine:
         return file_data
     
     def _update_history(self, files_data: List[Dict]):
-        """Обновляет историю тегов"""
+        """Обновляет историю тегов**"""
         self.tag_history['total_files'] += len(files_data)
         
         for file_data in files_data:
